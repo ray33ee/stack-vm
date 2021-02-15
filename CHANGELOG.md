@@ -5,12 +5,20 @@ All notable changes in this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
-## [1.0.1] - 2021-01-15
+## [1.0.2] - 2021-02-15
+### Changed
+  - `Machine` machine is now an iterator, with Machine::next() stepping into machine
+
 ### Added
-  - `Machine::step` Now steps through individual instructions
+  - `Machine::heap` heap field added to machine
+  - `Machine::reset` restart machine without needing to reload code, instructions or constants
+
+## [1.0.1] - 2021-02-15
+### Added
+  - `Machine::step` now steps through individual instructions
 
 ### Changed
-  - `Machine::run` Now uses `Machine::step`.
+  - `Machine::run` now uses `Machine::step`.
 
 ## [1.0.0] - 2018-09-14
 ### Changed

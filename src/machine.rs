@@ -5,6 +5,7 @@
 use crate::code::Code;
 use crate::frame::Frame;
 use crate::instruction_table::InstructionTable;
+use crate::Instruction;
 use crate::stack::Stack;
 use crate::table::Table;
 use std::fmt;
@@ -24,6 +25,7 @@ pub struct Machine<'a, T: 'a + fmt::Debug> {
     pub constants: &'a dyn Table<Item = T>,
     pub call_stack: Stack<Frame<T>>,
     pub operand_stack: Stack<T>,
+    pub heap: Vec<T>,
 }
 
 impl<'a, T: 'a + fmt::Debug> Machine<'a, T> {
@@ -35,6 +37,7 @@ impl<'a, T: 'a + fmt::Debug> Machine<'a, T> {
         code: Code<T>,
         constants: &'a dyn Table<Item = T>,
         instruction_table: &'a InstructionTable<T>,
+        heap: Vec<T>
     ) -> Machine<'a, T> {
         let frame: Frame<T> = Frame::new(code.code.len());
         let mut call_stack = Stack::new();
@@ -47,7 +50,14 @@ impl<'a, T: 'a + fmt::Debug> Machine<'a, T> {
             constants,
             call_stack,
             operand_stack: Stack::new(),
+            heap
         }
+    }
+
+    pub fn reset(& mut self) {
+        self.call_stack = Stack::new();
+        self.operand_stack = Stack::new();
+        self.ip = 0;
     }
 
     /// Run the machine.
@@ -60,42 +70,10 @@ impl<'a, T: 'a + fmt::Debug> Machine<'a, T> {
     ///
     /// Stops when either the last instruction is executed or when the
     /// last frame is removed from the call stack.
-    pub fn run(&mut self) {
-        loop {
-            if let None = self.step() {
-        		break;
-            }
+    pub fn run(& mut self) {
+        for _ in self {
+
         }
-    }
-
-    //Steps one instruction into the machine
-    //Returns None if the machine stops
-    pub fn step(&mut self) -> Option<()> {
-
-		if self.ip == self.code.code.len() {
-            return None;
-        }
-
-        let op_code = self.next_code();
-        let arity = self.next_code();
-
-        let instr = self
-            .instruction_table
-            .by_op_code(op_code)
-            .unwrap_or_else(|| panic!("Unable to find instruction with op code {}", op_code));
-
-        let mut args: Vec<usize> = vec![];
-
-        for _i in 0..arity {
-            args.push(self.next_code());
-        }
-
-        let fun = instr.fun;
-        fun(self, args.as_slice());
-
-        Some(())
-
-
     }
 
     /// Retrieve the next instruction of the program and increment
@@ -202,6 +180,37 @@ impl<'a, T: 'a + fmt::Debug> Machine<'a, T> {
         let frame = self.call_stack.pop();
         self.ip = frame.return_address;
     }
+}
+
+impl<'a, T: 'a + fmt::Debug> std::iter::Iterator for Machine<'a, T> {
+
+    type Item = (& 'a Instruction<T>, Vec<usize>);
+
+    fn next(& mut self) -> Option<Self::Item> {
+        if self.ip == self.code.code.len() {
+            return None;
+        }
+
+        let op_code = self.next_code();
+        let arity = self.next_code();
+
+        let instr = self
+            .instruction_table
+            .by_op_code(op_code)
+            .unwrap_or_else(|| panic!("Unable to find instruction with op code {}", op_code));
+
+        let mut args: Vec<usize> = vec![];
+
+        for _i in 0..arity {
+            args.push(self.next_code());
+        }
+
+        let fun = instr.fun;
+        fun(self, args.as_slice());
+
+        Some((instr, args))
+    }
+
 }
 
 #[cfg(test)]

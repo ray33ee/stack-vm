@@ -61,6 +61,7 @@ use crate::machine::Machine;
 /// * A name for serialisation and debugging reasons.
 /// * An arity - the number of arguments this instruction expects to receive.
 /// * A function which is used to execute the instruction.
+#[derive(Clone)]
 pub struct Instruction<T: fmt::Debug> {
     pub op_code: usize,
     pub name:    String,
