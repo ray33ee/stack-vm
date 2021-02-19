@@ -31,6 +31,7 @@ use std::fmt;
 /// * a list of instructions that have been pushed into this builder.
 /// * a `Table` of labels used for jumping.
 /// * a list of `T` to be stored in the builder's data section.
+#[derive(Clone)]
 pub struct Builder<'a, T: 'a + fmt::Debug + PartialEq> {
     pub instruction_table: &'a InstructionTable<T>,
     pub instructions: Vec<usize>,
