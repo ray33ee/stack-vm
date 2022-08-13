@@ -7,15 +7,15 @@
 //! ```
 //! use stack_vm::{Instruction, InstructionTable, Builder, Machine};
 //!
-//! fn push(machine: &mut Machine<f64>, args: &[usize]) {
+//! fn push(machine: &mut Machine<f64, u32>, args: &[usize]) {
 //!     let arg = machine.get_data(args[0]).clone();
 //!     machine.operand_push(arg)
 //! }
 //!
-//! let mut instruction_table: InstructionTable<f64> = InstructionTable::new();
+//! let mut instruction_table: InstructionTable<f64, u32> = InstructionTable::new();
 //! instruction_table.insert(Instruction::new(0, "push", 1, push));
 //!
-//! let mut builder: Builder<f64> = Builder::new(&instruction_table);
+//! let mut builder: Builder<f64, u32> = Builder::new(&instruction_table);
 //! builder.push("push", vec![1.23]);
 //! ```
 
@@ -31,21 +31,20 @@ use std::fmt;
 /// * a list of instructions that have been pushed into this builder.
 /// * a `Table` of labels used for jumping.
 /// * a list of `T` to be stored in the builder's data section.
-#[derive(Clone)]
-pub struct Builder<'a, T: 'a + fmt::Debug + PartialEq> {
-    pub instruction_table: &'a InstructionTable<T>,
+pub struct Builder<'a, T: 'a + fmt::Debug + PartialEq, D> {
+    pub instruction_table: &'a InstructionTable<T, D>,
     pub instructions: Vec<usize>,
     pub labels: WriteOnceTable<usize>,
     pub data: Vec<T>,
 }
 
-impl<'a, T: fmt::Debug + PartialEq> Builder<'a, T> {
+impl<'a, T: fmt::Debug + PartialEq, D> Builder<'a, T, D> {
     /// Create a new `Builder` from an `InstructionTable`.
-    pub fn new(instruction_table: &'a InstructionTable<T>) -> Builder<T> {
+    pub fn new(instruction_table: &'a InstructionTable<T, D>) -> Builder<T, D> {
         let mut labels = WriteOnceTable::new();
         labels.insert("main", 0);
         Builder {
-            instruction_table: &instruction_table,
+            instruction_table,
             instructions: vec![],
             labels,
             data: vec![],
@@ -113,7 +112,7 @@ impl<'a, T: fmt::Debug + PartialEq> Builder<'a, T> {
     }
 }
 
-impl<'a, T: 'a + fmt::Debug + PartialEq> fmt::Debug for Builder<'a, T> {
+impl<'a, T: 'a + fmt::Debug + PartialEq, D> fmt::Debug for Builder<'a, T, D> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let mut result = String::new();
 
@@ -167,9 +166,9 @@ mod test {
     use crate::instruction_table::InstructionTable;
     use crate::machine::Machine;
 
-    fn noop(_machine: &mut Machine<usize>, _args: &[usize]) {}
+    fn noop(_machine: &mut Machine<usize, u32>, _args: &[usize]) {}
 
-    fn example_instruction_table() -> InstructionTable<usize> {
+    fn example_instruction_table() -> InstructionTable<usize, u32> {
         let mut it = InstructionTable::new();
         it.insert(Instruction::new(0, "noop", 0, noop));
         it.insert(Instruction::new(1, "push", 1, noop));
@@ -180,14 +179,14 @@ mod test {
     #[test]
     fn new() {
         let it = example_instruction_table();
-        let builder: Builder<usize> = Builder::new(&it);
+        let builder: Builder<usize, u32> = Builder::new(&it);
         assert!(builder.instructions.is_empty());
     }
 
     #[test]
     fn push() {
         let it = example_instruction_table();
-        let mut builder: Builder<usize> = Builder::new(&it);
+        let mut builder: Builder<usize, u32> = Builder::new(&it);
         builder.push("noop", vec![]);
         assert!(!builder.instructions.is_empty());
     }
@@ -196,14 +195,14 @@ mod test {
     #[should_panic(expected = "has arity of")]
     fn push_with_incorrect_arity() {
         let it = example_instruction_table();
-        let mut builder: Builder<usize> = Builder::new(&it);
+        let mut builder: Builder<usize, u32> = Builder::new(&it);
         builder.push("noop", vec![1]);
     }
 
     #[test]
     fn label() {
         let it = example_instruction_table();
-        let mut builder: Builder<usize> = Builder::new(&it);
+        let mut builder: Builder<usize, u32> = Builder::new(&it);
         builder.push("noop", vec![]);
         builder.label("wow");
         assert_eq!(*builder.labels.get("wow").unwrap(), 2);
@@ -212,7 +211,7 @@ mod test {
     #[test]
     fn data_is_deduped() {
         let it = example_instruction_table();
-        let mut builder: Builder<usize> = Builder::new(&it);
+        let mut builder: Builder<usize, u32> = Builder::new(&it);
         builder.push("push", vec![123]);
         builder.push("push", vec![123]);
         builder.push("push", vec![123]);
@@ -222,7 +221,7 @@ mod test {
     #[test]
     fn debug_format() {
         let it = example_instruction_table();
-        let mut builder: Builder<usize> = Builder::new(&it);
+        let mut builder: Builder<usize, u32> = Builder::new(&it);
         builder.push("noop", vec![]);
         builder.push("push", vec![123]);
         builder.push("push", vec![456]);

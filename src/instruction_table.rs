@@ -11,26 +11,26 @@ use std::fmt;
 ///
 /// Implemented as a `HashMap` behind the scenes.
 #[derive(Debug, Default)]
-pub struct InstructionTable<T: fmt::Debug>(HashMap<usize, Instruction<T>>);
+pub struct InstructionTable<T: fmt::Debug, D>(HashMap<usize, Instruction<T, D>>);
 
-impl<T: fmt::Debug> InstructionTable<T> {
+impl<T: fmt::Debug, D> InstructionTable<T, D> {
     /// Create a new empty instruction table.
-    pub fn new() -> InstructionTable<T> {
+    pub fn new() -> InstructionTable<T, D> {
         InstructionTable(HashMap::new())
     }
 
     /// Retrieve an instruction by looking up it's op code.
-    pub fn by_op_code(&self, op_code: usize) -> Option<&Instruction<T>> {
+    pub fn by_op_code(&self, op_code: usize) -> Option<&Instruction<T, D>> {
         self.0.get(&op_code)
     }
 
     /// Retrieve an instruction by looking up it's name.
-    pub fn by_name(&self, name: &str) -> Option<&Instruction<T>> {
-        self.0.values().find(|ref instr| instr.name == name)
+    pub fn by_name(&self, name: &str) -> Option<&Instruction<T, D>> {
+        self.0.values().find(|instr| instr.name == name)
     }
 
     /// Insert an instruction into the table.
-    pub fn insert(&mut self, instr: Instruction<T>) {
+    pub fn insert(&mut self, instr: Instruction<T, D>) {
         self.0.insert(instr.op_code, instr);
     }
 
@@ -45,7 +45,7 @@ impl<T: fmt::Debug> InstructionTable<T> {
     /// each instruction.
     pub fn symbols(&self) -> Vec<(usize, String)> {
         let mut result = vec![];
-        self.0.keys().for_each(|ref key| {
+        self.0.keys().for_each(|key| {
             let instr = &self.0[key];
             result.push((instr.op_code, instr.name.clone()));
         });
@@ -59,17 +59,17 @@ mod test {
     use super::*;
     use crate::machine::Machine;
 
-    fn noop(_machine: &mut Machine<usize>, _args: &[usize]) {}
+    fn noop(_machine: &mut Machine<usize, u32>, _args: &[usize]) {}
 
     #[test]
     fn new() {
-        let table: InstructionTable<usize> = InstructionTable::new();
+        let table: InstructionTable<usize, u32> = InstructionTable::new();
         assert!(table.is_empty())
     }
 
     #[test]
     fn insert() {
-        let mut table: InstructionTable<usize> = InstructionTable::new();
+        let mut table: InstructionTable<usize, u32> = InstructionTable::new();
         assert!(table.is_empty());
         table.insert(Instruction::new(0, "NOOP", 0, noop));
         assert!(!table.is_empty());
@@ -77,7 +77,7 @@ mod test {
 
     #[test]
     fn by_op_code() {
-        let mut table: InstructionTable<usize> = InstructionTable::new();
+        let mut table: InstructionTable<usize, u32> = InstructionTable::new();
         table.insert(Instruction::new(0, "NOOP", 0, noop));
         let instr = table.by_op_code(0).unwrap();
         assert_eq!(instr.name, "NOOP");
@@ -85,7 +85,7 @@ mod test {
 
     #[test]
     fn by_name() {
-        let mut table: InstructionTable<usize> = InstructionTable::new();
+        let mut table: InstructionTable<usize, u32> = InstructionTable::new();
         table.insert(Instruction::new(0, "NOOP", 0, noop));
         let instr = table.by_name("NOOP").unwrap();
         assert_eq!(instr.op_code, 0);

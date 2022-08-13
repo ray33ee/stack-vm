@@ -26,7 +26,7 @@ use std::collections::HashMap;
 /// table.insert("example", 13);
 /// table.insert("example", 14);
 /// ```
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default)]
 pub struct WriteOnceTable<T>(HashMap<String, T>);
 
 impl<T> WriteOnceTable<T> {

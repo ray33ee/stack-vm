@@ -5,7 +5,6 @@
 use crate::code::Code;
 use crate::frame::Frame;
 use crate::instruction_table::InstructionTable;
-use crate::Instruction;
 use crate::stack::Stack;
 use crate::table::Table;
 use std::fmt;
@@ -18,27 +17,27 @@ use std::fmt;
 /// * A `Table` of constants, which you can use in your instructions if needed.
 /// * A `Stack` of `Frame` used to keep track of calls being executed.
 /// * A `Stack` of `T` which is used as the main operand stack.
-pub struct Machine<'a, T: 'a + fmt::Debug> {
+pub struct Machine<'a, T: 'a + fmt::Debug, D> {
     pub code: Code<T>,
-    pub instruction_table: &'a InstructionTable<T>,
+    pub instruction_table: &'a InstructionTable<T, D>,
     pub ip: usize,
     pub constants: &'a dyn Table<Item = T>,
     pub call_stack: Stack<Frame<T>>,
     pub operand_stack: Stack<T>,
-    pub heap: Vec<T>,
+    pub data: D,
 }
 
-impl<'a, T: 'a + fmt::Debug> Machine<'a, T> {
+impl<'a, T: 'a + fmt::Debug, D> Machine<'a, T, D> {
     /// Returns a new `Machine` ready to execute instructions.
     ///
     /// The machine is initialised by passing in your `Code` which contains
-    /// all the code and data of your program, and a `Table` of constants`.
+    /// all the code and data of your program, a `Table` of constants`, and a generic data field.
     pub fn new(
         code: Code<T>,
         constants: &'a dyn Table<Item = T>,
-        instruction_table: &'a InstructionTable<T>,
-        heap: Vec<T>
-    ) -> Machine<'a, T> {
+        instruction_table: &'a InstructionTable<T, D>,
+        data: D,
+    ) -> Machine<'a, T, D> {
         let frame: Frame<T> = Frame::new(code.code.len());
         let mut call_stack = Stack::new();
         call_stack.push(frame);
@@ -50,14 +49,15 @@ impl<'a, T: 'a + fmt::Debug> Machine<'a, T> {
             constants,
             call_stack,
             operand_stack: Stack::new(),
-            heap
+            data,
         }
     }
 
-    pub fn reset(& mut self) {
-        self.call_stack = Stack::new();
-        self.operand_stack = Stack::new();
-        self.ip = 0;
+    ///Get a mutable reference to the data within the machine
+    ///
+    /// The `Data` field can be used to store useful information and use it during instruction calls
+    pub fn data(& mut self) -> & mut D {
+        & mut self.data
     }
 
     /// Run the machine.
@@ -70,9 +70,28 @@ impl<'a, T: 'a + fmt::Debug> Machine<'a, T> {
     ///
     /// Stops when either the last instruction is executed or when the
     /// last frame is removed from the call stack.
-    pub fn run(& mut self) {
-        for _ in self {
+    pub fn run(&mut self) {
+        loop {
+            if self.ip == self.code.code.len() {
+                break;
+            }
 
+            let op_code = self.next_code();
+            let arity = self.next_code();
+
+            let instr = self
+                .instruction_table
+                .by_op_code(op_code)
+                .unwrap_or_else(|| panic!("Unable to find instruction with op code {}", op_code));
+
+            let mut args: Vec<usize> = vec![];
+
+            for _i in 0..arity {
+                args.push(self.next_code());
+            }
+
+            let fun = instr.fun;
+            fun(self, args.as_slice());
         }
     }
 
@@ -182,37 +201,6 @@ impl<'a, T: 'a + fmt::Debug> Machine<'a, T> {
     }
 }
 
-impl<'a, T: 'a + fmt::Debug> std::iter::Iterator for Machine<'a, T> {
-
-    type Item = (& 'a Instruction<T>, Vec<usize>);
-
-    fn next(& mut self) -> Option<Self::Item> {
-        if self.ip == self.code.code.len() {
-            return None;
-        }
-
-        let op_code = self.next_code();
-        let arity = self.next_code();
-
-        let instr = self
-            .instruction_table
-            .by_op_code(op_code)
-            .unwrap_or_else(|| panic!("Unable to find instruction with op code {}", op_code));
-
-        let mut args: Vec<usize> = vec![];
-
-        for _i in 0..arity {
-            args.push(self.next_code());
-        }
-
-        let fun = instr.fun;
-        fun(self, args.as_slice());
-
-        Some((instr, args))
-    }
-
-}
-
 #[cfg(test)]
 mod test {
     use super::*;
@@ -221,18 +209,18 @@ mod test {
     use crate::instruction_table::InstructionTable;
     use crate::write_many_table::WriteManyTable;
 
-    fn push(machine: &mut Machine<usize>, args: &[usize]) {
+    fn push(machine: &mut Machine<usize, u32>, args: &[usize]) {
         let arg = &machine.code.data[args[0]];
         machine.operand_stack.push(*arg);
     }
 
-    fn add(machine: &mut Machine<usize>, _args: &[usize]) {
+    fn add(machine: &mut Machine<usize, u32>, _args: &[usize]) {
         let rhs = machine.operand_pop();
         let lhs = machine.operand_pop();
         machine.operand_stack.push(lhs + rhs);
     }
 
-    fn instruction_table() -> InstructionTable<usize> {
+    fn instruction_table() -> InstructionTable<usize, u32> {
         let mut it = InstructionTable::new();
         it.insert(Instruction::new(1, "push", 1, push));
         it.insert(Instruction::new(2, "add", 0, add));
@@ -242,9 +230,9 @@ mod test {
     #[test]
     fn new() {
         let it = instruction_table();
-        let builder: Builder<usize> = Builder::new(&it);
+        let builder: Builder<usize, u32> = Builder::new(&it);
         let constants: WriteManyTable<usize> = WriteManyTable::new();
-        let machine = Machine::new(Code::from(builder), &constants, &it);
+        let machine = Machine::new(Code::from(builder), &constants, &it, 0);
         assert_eq!(machine.ip, 0);
         assert!(!machine.call_stack.is_empty());
         assert!(machine.operand_stack.is_empty());
@@ -253,12 +241,12 @@ mod test {
     #[test]
     fn run() {
         let it = instruction_table();
-        let mut builder: Builder<usize> = Builder::new(&it);
+        let mut builder: Builder<usize, u32> = Builder::new(&it);
         builder.push("push", vec![2]);
         builder.push("push", vec![3]);
         builder.push("add", vec![]);
         let constants: WriteManyTable<usize> = WriteManyTable::new();
-        let mut machine = Machine::new(Code::from(builder), &constants, &it);
+        let mut machine = Machine::new(Code::from(builder), &constants, &it, 0);
         machine.run();
         let result = machine.operand_stack.pop();
         assert_eq!(result, 5);
@@ -267,9 +255,9 @@ mod test {
     #[test]
     fn get_local() {
         let it = instruction_table();
-        let builder: Builder<usize> = Builder::new(&it);
+        let builder: Builder<usize, u32> = Builder::new(&it);
         let constants: WriteManyTable<usize> = WriteManyTable::new();
-        let mut machine = Machine::new(Code::from(builder), &constants, &it);
+        let mut machine = Machine::new(Code::from(builder), &constants, &it, 0);
         assert!(machine.get_local("example").is_none());
         machine.set_local("example", 13);
         assert!(machine.get_local("example").is_some());
@@ -278,11 +266,11 @@ mod test {
     #[test]
     fn get_local_deep() {
         let it = instruction_table();
-        let mut builder: Builder<usize> = Builder::new(&it);
+        let mut builder: Builder<usize, u32> = Builder::new(&it);
         builder.label("next");
 
         let constants: WriteManyTable<usize> = WriteManyTable::new();
-        let mut machine = Machine::new(Code::from(builder), &constants, &it);
+        let mut machine = Machine::new(Code::from(builder), &constants, &it, 0);
         machine.set_local("outer", 13);
         assert_eq!(*machine.get_local_deep("outer").unwrap(), 13);
         machine.call("next");
@@ -298,9 +286,9 @@ mod test {
     #[test]
     fn set_local() {
         let it = instruction_table();
-        let builder: Builder<usize> = Builder::new(&it);
+        let builder: Builder<usize, u32> = Builder::new(&it);
         let constants: WriteManyTable<usize> = WriteManyTable::new();
-        let mut machine = Machine::new(Code::from(builder), &constants, &it);
+        let mut machine = Machine::new(Code::from(builder), &constants, &it, 0);
         assert!(machine.get_local("example").is_none());
         machine.set_local("example", 13);
         assert_eq!(*machine.get_local("example").unwrap(), 13);

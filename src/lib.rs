@@ -58,7 +58,7 @@
 //! use stack_vm::Machine;
 //! type Operand = i64;
 //!
-//! fn push(machine: &mut Machine<Operand>, args: &[usize]) {
+//! fn push(machine: &mut Machine<Operand, u32>, args: &[usize]) {
 //!     let arg = machine.get_data(args[0]).clone();
 //!     machine.operand_push(arg);
 //! }
@@ -84,12 +84,12 @@
 //! use stack_vm::{Instruction, InstructionTable, Machine};
 //! type Operand = i64;
 //!
-//! fn push(machine: &mut Machine<Operand>, args: &[usize]) {
+//! fn push(machine: &mut Machine<Operand, u32>, args: &[usize]) {
 //!     let arg = machine.get_data(args[0]).clone();
 //!     machine.operand_push(arg);
 //! }
 //!
-//! fn add(machine: &mut Machine<Operand>, _args: &[usize]) {
+//! fn add(machine: &mut Machine<Operand, u32>, _args: &[usize]) {
 //!     let rhs = machine.operand_pop().clone();
 //!     let lhs = machine.operand_pop().clone();
 //!     machine.operand_push(lhs + rhs);
@@ -112,12 +112,12 @@
 //! use stack_vm::{Instruction, InstructionTable, Machine, Builder};
 //! type Operand = i64;
 //!
-//! fn push(machine: &mut Machine<Operand>, args: &[usize]) {
+//! fn push(machine: &mut Machine<Operand, u32>, args: &[usize]) {
 //!     let arg = machine.get_data(args[0]).clone();
 //!     machine.operand_push(arg);
 //! }
 //!
-//! fn add(machine: &mut Machine<Operand>, _args: &[usize]) {
+//! fn add(machine: &mut Machine<Operand, u32>, _args: &[usize]) {
 //!     let rhs = machine.operand_pop().clone();
 //!     let lhs = machine.operand_pop().clone();
 //!     machine.operand_push(lhs + rhs);
@@ -127,7 +127,7 @@
 //! instruction_table.insert(Instruction::new(0, "push", 1, push));
 //! instruction_table.insert(Instruction::new(1, "add",  0, add));
 //!
-//! let mut builder: Builder<Operand> = Builder::new(&instruction_table);
+//! let mut builder: Builder<Operand, u32> = Builder::new(&instruction_table);
 //! builder.push("push", vec![3 as Operand]);
 //! builder.push("push", vec![4 as Operand]);
 //! builder.push("add", vec![]);
@@ -154,12 +154,12 @@
 //! use stack_vm::{Instruction, InstructionTable, Machine, Builder, WriteManyTable, Code};
 //! type Operand = i64;
 //!
-//! fn push(machine: &mut Machine<Operand>, args: &[usize]) {
+//! fn push(machine: &mut Machine<Operand, u32>, args: &[usize]) {
 //!     let arg = machine.get_data(args[0]).clone();
 //!     machine.operand_push(arg);
 //! }
 //!
-//! fn add(machine: &mut Machine<Operand>, _args: &[usize]) {
+//! fn add(machine: &mut Machine<Operand, u32>, _args: &[usize]) {
 //!     let rhs = machine.operand_pop().clone();
 //!     let lhs = machine.operand_pop().clone();
 //!     machine.operand_push(lhs + rhs);
@@ -169,13 +169,13 @@
 //! instruction_table.insert(Instruction::new(0, "push", 1, push));
 //! instruction_table.insert(Instruction::new(1, "add",  0, add));
 //!
-//! let mut builder: Builder<Operand> = Builder::new(&instruction_table);
+//! let mut builder: Builder<Operand, u32> = Builder::new(&instruction_table);
 //! builder.push("push", vec![3 as Operand]);
 //! builder.push("push", vec![4 as Operand]);
 //! builder.push("add", vec![]);
 //!
 //! let constants: WriteManyTable<Operand> = WriteManyTable::new();
-//! let mut machine = Machine::new(Code::from(builder), &constants, &instruction_table);
+//! let mut machine = Machine::new(Code::from(builder), &constants, &instruction_table, 0);
 //! machine.run();
 //! assert_eq!(machine.operand_pop(), 7);
 //! ```

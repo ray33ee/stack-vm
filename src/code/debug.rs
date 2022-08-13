@@ -5,11 +5,6 @@ impl<T: fmt::Debug> fmt::Debug for Code<T> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let mut result = String::new();
 
-        // Write out constant data into the header.
-        for i in 0..self.data.len() {
-            result.push_str(&format!("@{} = {:?}\n", i, self.data[i]));
-        }
-
         // Loop through the code and print out useful stuff.
         let mut ip = 0;
         let len = self.code.len();
@@ -41,7 +36,7 @@ impl<T: fmt::Debug> fmt::Debug for Code<T> {
             for _i in 0..arity {
                 let const_idx = self.code[ip];
                 ip += 1;
-                result.push_str(&format!(" @{}", const_idx));
+                result.push_str(&format!(" {:?}", self.data[const_idx]));
             }
             result.push('\n');
         }

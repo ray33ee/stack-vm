@@ -14,12 +14,12 @@
 //! #[derive(Debug, PartialEq)]
 //! struct Operand(i64);
 //!
-//! fn example_noop(_machine: &mut Machine<Operand>, _args: &[usize]) {}
+//! fn example_noop(_machine: &mut Machine<Operand, u32>, _args: &[usize]) {}
 //!
 //! let mut instruction_table = InstructionTable::new();
 //! instruction_table.insert(Instruction::new(1, "push", 1, example_noop));
 //!
-//! let mut builder: Builder<Operand> = Builder::new(&instruction_table);
+//! let mut builder: Builder<Operand, u32> = Builder::new(&instruction_table);
 //! builder.push("push", vec![Operand(13)]);
 //! builder.push("push", vec![Operand(14)]);
 //!
@@ -88,6 +88,7 @@ use std::fmt;
 mod debug;
 mod from_byte_code;
 mod to_byte_code;
+mod from_string;
 
 /// A structure containing runnable or dumpable code.
 ///
@@ -158,11 +159,11 @@ impl<T: fmt::Debug> Code<T> {
     }
 }
 
-impl<'a, T: fmt::Debug + PartialEq> From<Builder<'a, T>> for Code<T> {
+impl<'a, T: fmt::Debug + PartialEq, D> From<Builder<'a, T, D>> for Code<T> {
     /// Convert a `Builder` into `Code`.
     ///
     /// This function consumes the builder and returns a `Code`.
-    fn from(builder: Builder<T>) -> Code<T> {
+    fn from(builder: Builder<T, D>) -> Code<T> {
         let symbols = builder.instruction_table.symbols();
         let code = builder.instructions;
         let data = builder.data;
@@ -205,9 +206,9 @@ mod test {
         }
     }
 
-    fn noop(_machine: &mut Machine<usize>, _args: &[usize]) {}
+    fn noop(_machine: &mut Machine<usize, u32>, _args: &[usize]) {}
 
-    fn example_instruction_table() -> InstructionTable<usize> {
+    fn example_instruction_table() -> InstructionTable<usize, u32> {
         let mut it = InstructionTable::new();
         it.insert(Instruction::new(0, "noop", 0, noop));
         it.insert(Instruction::new(1, "push", 1, noop));
@@ -218,7 +219,7 @@ mod test {
     #[test]
     fn from_builder() {
         let it = example_instruction_table();
-        let mut builder: Builder<usize> = Builder::new(&it);
+        let mut builder: Builder<usize, u32> = Builder::new(&it);
         builder.push("push", vec![13]);
         builder.push("push", vec![14]);
         let code: Code<usize> = Code::from(builder);
@@ -237,7 +238,7 @@ mod test {
     #[test]
     fn get_label_ip() {
         let it = example_instruction_table();
-        let builder: Builder<usize> = Builder::new(&it);
+        let builder: Builder<usize, u32> = Builder::new(&it);
         let code: Code<usize> = Code::from(builder);
         assert_eq!(code.get_label_ip("main").unwrap(), 0);
     }
@@ -245,7 +246,7 @@ mod test {
     #[test]
     fn debug_formatter() {
         let it = example_instruction_table();
-        let mut builder: Builder<usize> = Builder::new(&it);
+        let mut builder: Builder<usize, u32> = Builder::new(&it);
         builder.push("noop", vec![]);
         builder.push("push", vec![123]);
         builder.push("push", vec![456]);
@@ -271,7 +272,7 @@ mod test {
     #[test]
     fn to_byte_code() {
         let it = example_instruction_table();
-        let mut builder: Builder<usize> = Builder::new(&it);
+        let mut builder: Builder<usize, u32> = Builder::new(&it);
         builder.push("noop", vec![]);
         builder.push("push", vec![123]);
         builder.push("push", vec![456]);

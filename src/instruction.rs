@@ -10,7 +10,7 @@
 //! ```
 //! use stack_vm::{Instruction, Machine};
 //!
-//! fn push(machine: &mut Machine<u64>, args: &[usize]) {
+//! fn push(machine: &mut Machine<u64, u32>, args: &[usize]) {
 //!     let arg = machine.get_data(args[0]).clone();
 //!     machine.operand_push(arg);
 //! }
@@ -23,7 +23,7 @@
 //! ```
 //! use stack_vm::{Instruction, Machine};
 //!
-//! fn noop(_machine: &mut Machine<u64>, _args: &[usize]) {
+//! fn noop(_machine: &mut Machine<u64, u32>, _args: &[usize]) {
 //!     println!("noop");
 //! }
 //! ```
@@ -40,7 +40,7 @@
 //! #[derive(Debug)]
 //! enum Operand { I(i64), S(String) }
 //!
-//! fn jump(machine: &mut Machine<Operand>, args: &[usize]) {
+//! fn jump(machine: &mut Machine<Operand, u32>, args: &[usize]) {
 //!     let label = match machine.get_data(args[0]) {
 //!         &Operand::S(ref str) => str.clone(),
 //!         _ => panic!("Cannot jump to non-string label.")
@@ -61,12 +61,11 @@ use crate::machine::Machine;
 /// * A name for serialisation and debugging reasons.
 /// * An arity - the number of arguments this instruction expects to receive.
 /// * A function which is used to execute the instruction.
-#[derive(Clone)]
-pub struct Instruction<T: fmt::Debug> {
+pub struct Instruction<T: fmt::Debug, D> {
     pub op_code: usize,
     pub name:    String,
     pub arity:   usize,
-    pub fun:     InstructionFn<T>
+    pub fun:     InstructionFn<T, D>
 }
 
 /// The instruction function signature.
@@ -79,17 +78,17 @@ pub struct Instruction<T: fmt::Debug> {
 ///
 /// The `args` array contains indexes into the `Builder`'s data section. It's
 /// up to your instruction to retrieve said data.
-pub type InstructionFn<T> = fn(machine: &mut Machine<T>, args: &[usize]);
+pub type InstructionFn<T, D> = fn(machine: &mut Machine<T, D>, args: &[usize]);
 
-impl<T: fmt::Debug> fmt::Debug for Instruction<T> {
+impl<T: fmt::Debug, D> fmt::Debug for Instruction<T, D> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "Instruction {{ op_code: {}, name: {}, arity: {} }}", self.op_code, self.name, self.arity)
     }
 }
 
-impl<T: fmt::Debug> Instruction<T> {
+impl<T: fmt::Debug, D> Instruction<T, D> {
     /// Create a new instruction.
-    pub fn new(op_code: usize, name: &str, arity: usize, fun: InstructionFn<T>) -> Instruction<T> {
+    pub fn new(op_code: usize, name: &str, arity: usize, fun: InstructionFn<T, D>) -> Instruction<T, D> {
         Instruction {
             op_code,
             name: String::from(name),
@@ -107,7 +106,7 @@ mod test {
     #[derive(Debug)]
     struct Operand(i64);
 
-    fn noop(_machine: &mut Machine<Operand>, _args: &[usize]) {}
+    fn noop(_machine: &mut Machine<Operand, u32>, _args: &[usize]) {}
 
     #[test]
     fn new() {

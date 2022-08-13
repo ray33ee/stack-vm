@@ -28,7 +28,7 @@ impl Operand {
 }
 
 /// Pushes an piece of data from the data section onto the operand stack.
-fn push(machine: &mut Machine<Operand>, args: &[usize]) {
+fn push(machine: &mut Machine<Operand, u32>, args: &[usize]) {
     let arg = machine.get_data(args[0]).clone();
     machine.operand_push(arg);
 }
@@ -36,7 +36,7 @@ fn push(machine: &mut Machine<Operand>, args: &[usize]) {
 /// `jump_if` pops the top operand from the stack.  If it's non-zero then it jumps
 /// to the provided label, otherwise continues executing from the next IP as
 /// normal.
-fn jump_if(machine: &mut Machine<Operand>, args: &[usize]) {
+fn jump_if(machine: &mut Machine<Operand, u32>, args: &[usize]) {
     let condition = machine.operand_pop().to_i().unwrap();
     if condition != 0 {
         let label = machine.get_data(args[0]).clone();
@@ -45,12 +45,12 @@ fn jump_if(machine: &mut Machine<Operand>, args: &[usize]) {
 }
 
 /// `jump` immediately jumps to the provided label.
-fn jump(machine: &mut Machine<Operand>, args: &[usize]) {
+fn jump(machine: &mut Machine<Operand, u32>, args: &[usize]) {
     let label = machine.get_data(args[0]).clone();
     machine.jump(label.to_s().unwrap());
 }
 
-fn instruction_table() -> InstructionTable<Operand> {
+fn instruction_table() -> InstructionTable<Operand, u32> {
     let mut it = InstructionTable::new();
     it.insert(Instruction::new(0, "push", 1, push));
     it.insert(Instruction::new(1, "jump_if", 1, jump_if));
@@ -84,7 +84,7 @@ fn condition_false() {
 
 fn conditional_program(condition: Operand) -> Operand {
     let it = instruction_table();
-    let mut builder: Builder<Operand> = Builder::new(&it);
+    let mut builder: Builder<Operand, u32> = Builder::new(&it);
     builder.push("push", vec![condition]);
     builder.push("jump_if", vec![Operand::from("if_true")]);
     builder.push("push", vec![Operand::from("it was false")]);
@@ -94,7 +94,7 @@ fn conditional_program(condition: Operand) -> Operand {
     builder.label("end");
     let code = Code::from(builder);
     let constants: WriteManyTable<Operand> = WriteManyTable::new();
-    let mut machine: Machine<Operand> = Machine::new(code, &constants, &it);
+    let mut machine: Machine<Operand, u32> = Machine::new(code, &constants, &it, 0);
     machine.run();
     machine.operand_pop()
 }

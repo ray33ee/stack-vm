@@ -36,14 +36,14 @@ impl Operand {
 }
 
 /// Pushes an piece of data from the data section onto the operand stack.
-fn push(machine: &mut Machine<Operand>, args: &[usize]) {
+fn push(machine: &mut Machine<Operand, u32>, args: &[usize]) {
     let arg = machine.get_data(args[0]).clone();
     machine.operand_push(arg)
 }
 
 /// Pops two operands off the top of the stack, adds them together and
 /// pushes the result back onto the stack.
-fn add(machine: &mut Machine<Operand>, _args: &[usize]) {
+fn add(machine: &mut Machine<Operand, u32>, _args: &[usize]) {
     let rhs = machine.operand_pop().to_i().unwrap();
     let lhs = machine.operand_pop().to_i().unwrap();
     machine.operand_push(Operand::I(lhs + rhs));
@@ -51,18 +51,18 @@ fn add(machine: &mut Machine<Operand>, _args: &[usize]) {
 
 /// Takes the name of a label from the data section and asks the interpreter
 /// to jump to it.
-fn call(machine: &mut Machine<Operand>, args: &[usize]) {
+fn call(machine: &mut Machine<Operand, u32>, args: &[usize]) {
     let label = machine.get_data(args[0]).clone();
     machine.call(label.to_s().unwrap());
 }
 
 /// Ask the interpreter to perform a return.
-fn ret(machine: &mut Machine<Operand>, _args: &[usize]) {
+fn ret(machine: &mut Machine<Operand, u32>, _args: &[usize]) {
     machine.ret();
 }
 
 /// Generate an instruction table using the instructions outlined above.
-fn instruction_table() -> InstructionTable<Operand> {
+fn instruction_table() -> InstructionTable<Operand, u32> {
     let mut it = InstructionTable::new();
     it.insert(Instruction::new(0, "push", 1, push));
     it.insert(Instruction::new(1, "add", 0, add));
@@ -86,7 +86,7 @@ impl<'a> From<&'a str> for Operand {
 #[test]
 fn example() {
     let it = instruction_table();
-    let mut builder: Builder<Operand> = Builder::new(&it);
+    let mut builder: Builder<Operand, u32> = Builder::new(&it);
     builder.push("push", vec![Operand::from(3)]);
     builder.push("push", vec![Operand::from(4)]);
     builder.push("call", vec![Operand::from("add_fun")]);
@@ -95,7 +95,7 @@ fn example() {
     builder.push("add", vec![]);
     builder.push("ret", vec![]);
     let constants: WriteManyTable<Operand> = WriteManyTable::new();
-    let mut machine: Machine<Operand> = Machine::new(Code::from(builder), &constants, &it);
+    let mut machine: Machine<Operand, u32> = Machine::new(Code::from(builder), &constants, &it, 0);
     machine.run();
     let result = machine.operand_pop().to_i().unwrap();
     assert_eq!(result, 7);
