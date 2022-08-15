@@ -1,6 +1,6 @@
 [package]
 name = "stack-vm"
-version = "1.0.2"
+version = "1.0.3"
 authors = ["James Harton <james@harton.nz>"]
 license = "MIT"
 description = "A generic, reusable, stack-based virtual machine."
@@ -12,3 +12,5 @@ gitlab = { repository = "huia-lang/stack-vm" }
 
 [dependencies]
 rmp = "=0.8.11"
+regex = "1.6.0"
+lazy_static = "1.4.0"

@@ -84,8 +84,10 @@ impl<'a, T: fmt::Debug + PartialEq, D> Builder<'a, T, D> {
     /// Labels are used as targets for jumps.  When you call this method a
     /// label is stored which points to the position of the next instruction.
     pub fn label(&mut self, name: &str) {
-        let idx = self.instructions.len();
-        self.labels.insert(name, idx);
+        if name != "main" || self.instructions.len() != 0 {
+            let idx = self.instructions.len();
+            self.labels.insert(name, idx);
+        }
     }
 
     /// Return the length of the instructions vector.

@@ -199,6 +199,11 @@ impl<'a, T: 'a + fmt::Debug, D> Machine<'a, T, D> {
         let frame = self.call_stack.pop();
         self.ip = frame.return_address;
     }
+
+    ///Releases the underlying Data object and consumes the machine
+    pub fn release(self) -> D {
+        self.data
+    }
 }
 
 #[cfg(test)]

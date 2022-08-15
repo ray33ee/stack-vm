@@ -88,7 +88,7 @@ use std::fmt;
 mod debug;
 mod from_byte_code;
 mod to_byte_code;
-mod from_string;
+pub mod from_string;
 
 /// A structure containing runnable or dumpable code.
 ///
@@ -255,13 +255,11 @@ mod test {
         let code = Code::from(builder);
 
         let actual = format!("{:?}", code);
-        let expected = "@0 = 123
-@1 = 456
-
+        let expected = "
 .main:
 \tnoop
-\tpush @0
-\tpush @1
+\tpush 123
+\tpush 456
 
 .some_function:
 \tpop

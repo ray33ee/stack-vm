@@ -193,8 +193,11 @@
 //!
 //! You can find an example of function calling in this package's acceptance
 //! tests.
+#[macro_use]
+extern crate lazy_static;
 
 extern crate rmp;
+extern crate regex;
 
 mod builder;
 mod code;

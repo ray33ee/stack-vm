@@ -1,34 +1,71 @@
+use regex::Regex;
 use std::fmt;
+use std::path::Path;
 use ::{Code, InstructionTable};
 use Builder;
+use lazy_static::lazy_static;
 
 impl<'a, T: fmt::Debug + PartialEq + From<& 'a str>> Code<T> {
-    fn parse<D>(s: & 'a str, table: &InstructionTable<T, D>) -> Self {
+    pub fn parse<D>(s: & 'a str, table: &InstructionTable<T, D>) -> Self {
+
+        lazy_static!{
+
+            static ref RE: Regex = Regex::new("[^\\s]*\"[^\"]*\"[^\\s]*").unwrap();
+
+        }
+
+
         let mut builder = Builder::new(table);
+
+
 
         for line in s.split('\n') {
             //Get all non-comment content
             let mut line = line.split('#');
             let line = line.next().unwrap();
 
-            if line.contains(':') {
 
-                let mut split = line.split(':');
+            let tokens: Vec<&str> = {
+                let mut last = 0;
+
+                let mut res = Vec::new();
+
+                for m in RE.find_iter(line) {
+
+                    let pre= &line[last..m.start()];
+
+                    for it in pre.split_whitespace() {
+                        res.push(it);
+                    }
+
+                    res.push(m.as_str());
+                    last = m.end();
+                }
+
+                for it in (&line[last..]).split_whitespace() {
+                    res.push(it);
+                }
+
+                res
+            };
+
+            let tokens: Vec<_> = tokens.iter().filter(|str| !str.is_empty()).collect();
+
+            //If the line is just a comment, just whitespace, or completely empty
+            if tokens.is_empty() {
+                continue
+            }
+
+            if tokens[0].as_bytes()[0] == '.' as u8 {
+                let mut split = line.split(|c| c == ':' || c == '.').filter(|c| !c.is_empty());
+
                 let pre = split.next().unwrap();
 
                 let mut label = pre.split_whitespace();
                 let fin = label.next().unwrap();
 
                 builder.label(fin);
-
             } else {
-                let tokens: Vec<_> = line.split_whitespace().collect();
-
-                //If the line is just a comment, just whitespace, or completely empty
-                if tokens.is_empty() {
-                    continue
-                }
-
                 let operation = table.by_name(tokens[0]).unwrap();
 
 
@@ -41,9 +78,9 @@ impl<'a, T: fmt::Debug + PartialEq + From<& 'a str>> Code<T> {
                 };
 
                 builder.push(operation.name.as_str(), args);
-
-
             }
+
+
 
 
 
@@ -107,8 +144,9 @@ mod test {
         table.insert(Instruction::new(2, "sub", 0, push));
 
         let s = "
+.main:
 	push 33
-	push hello_string
+	push hello_world
 	add
 ";
 
@@ -116,5 +154,7 @@ mod test {
         let code = Code::<Operand>::parse(s, &table);
 
         println!("{:?}", code);
+
+        assert_eq!(s, format!("{:?}", code))
     }
 }
